@@ -28,14 +28,17 @@
    ```bash
    git clone https://github.com/misaka9988/costing-tool.git
    cd costing-tool
+   
 2.安装依赖：
 pip install -r requirements.txt
+
 3.配置环境变量：
-在项目根目录新建 .env 文件，填入你的 DeepSeek API Key：
-DEEPSEEK_API_KEY="sk-你的真实API_KEY"
+在项目根目录新建 .env 文件，填入你的 DeepSeek API Key：DEEPSEEK_API_KEY="sk-你的真实API_KEY"
+
 4.启动应用：
 streamlit run web_page.py
 
 📝 业务背景
 
-在传统采购环节中，面对几百颗料，核价员往往需要花费 1-2 天时间手动计算和比价，且极易出错。等审批流程走完，往往错过最佳锁价期，导致缺货或供应商涨价。本项目通过自动化脚本与大模型，将这一过程缩短至秒级，极大降低了人工对账成本与断供风险。
+在传统采购环节中，面对几百颗料，核价员往往需要花费 1-2 天时间手动计算和比价，且极易出错。
+等审批流程走完，往往错过最佳锁价期，导致缺货或供应商涨价。本项目通过自动化脚本与大模型，将这一过程缩短至秒级，极大降低了人工对账成本与断供风险。
