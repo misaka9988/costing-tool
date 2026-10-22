@@ -177,6 +177,8 @@ uploaded_file = st.file_uploader("点击或将 Excel 报价表拖拽到这里", 
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
+        # 让用户自定义预警阈值
+    threshold = st.slider("⚠️ 设置涨幅预警阈值 (%)", min_value=1, max_value=50, value=8, step=1)
     
     # ================= 智能兼容与清洗 =================
     df = smart_column_mapping(df)
@@ -205,7 +207,7 @@ if uploaded_file is not None:
     df['涨幅比例'] = (df['最新报价'] - df['历史单价']) / df['历史单价']
     df['涨幅比例'] = df['涨幅比例'].replace([float('inf'), -float('inf')], 0).fillna(0)
     
-    alerts_df = df[(df['涨幅比例'] > 0.08) | (df['最新报价'] > df['客户预算价'])]
+    alerts_df = df[(df['涨幅比例'] > (threshold / 100)) | (df['最新报价'] > df['客户预算价'])]
     
     st.write("") 
     
