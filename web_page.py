@@ -250,4 +250,4 @@ else:
     with f_col2:
         st.markdown("<div class='feature-card'><div class='feature-icon'>🛡️</div><div class='feature-title'>智能预警</div><div class='feature-desc'>实时比对历史价与客户预算，自动揪出异常。</div></div>", unsafe_allow_html=True)
     with f_col3:
-        st.markdown("<div class='feature-card'><div class='feature-icon'>🤖</div><div class='feature-title'>AI 撰写邮件</div><div class='feature-desc'>自动生成致客户的催批调价邮件，一键复制。</div></div>", unsafe_allow_html=True)
+        st.markdown("<div class='feature-card'><div class='feature-icon'>📧</div><div class='feature-title'>AI 撰写邮件</div><div class='feature-desc'>自动生成致客户的催批调价邮件，一键复制。</div></div>", unsafe_allow_html=True)
