@@ -1,11 +1,41 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import re
 from ai_service import generate_approval_email
 
 st.set_page_config(page_title="AI 核价风控看板", page_icon="📊", layout="wide")
 
-# ================= 终极精装修 CSS (完美等高版) =================
+# ================= 核心：智能数据清洗与兼容函数 =================
+def smart_column_mapping(df):
+    """自动识别同义词列名，将乱表头统一为标准表头"""
+    column_aliases = {
+        '物料编码': ['物料编码', '料号', '物料编号', '编码', 'Part No', 'Part Number', 'Item'],
+        '物料名称': ['物料名称', '名称', '品名', '描述', 'Description', 'Item Name'],
+        '历史单价': ['历史单价', '历史价', '原价', '旧价', '基准价', '采购价', '历史采购价'],
+        '最新报价': ['最新报价', '单价', '报价', '新价格', '现价', 'Unit Price', 'Price'],
+        '采购数量': ['采购数量', '数量', '需求量', '需求数', 'Qty', 'Quantity'],
+        '客户预算价': ['客户预算价', '预算价', '目标价', '限价', 'Target Price']
+    }
+    df.columns = df.columns.astype(str).str.strip()
+    rename_dict = {}
+    for std_col, aliases in column_aliases.items():
+        for alias in aliases:
+            matched_cols = [col for col in df.columns if alias.lower() == col.lower()]
+            if matched_cols:
+                rename_dict[matched_cols[0]] = std_col
+                break
+    return df.rename(columns=rename_dict)
+
+def clean_numeric_data(df, columns):
+    """数据清洗：把 '12.5元', '—', 空格 等强制转换成纯数字"""
+    for col in columns:
+        if col in df.columns:
+            df[col] = df[col].astype(str).str.replace(r'[^\d.]', '', regex=True) 
+            df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0) 
+    return df
+
+# ================= 终极精装修 CSS =================
 st.markdown("""
 <style>
     /* 1. 隐藏默认UI */
@@ -82,7 +112,6 @@ st.markdown("""
     }
 
     /* ================= 7. 纯 HTML 指标卡片 (绝对等高) ================= */
-    /* 强制让 st.columns 里的列撑满高度 */
     [data-testid="column"] { display: flex; flex-direction: column; }
     [data-testid="column"] > div { height: 100%; }
     
@@ -148,9 +177,34 @@ uploaded_file = st.file_uploader("点击或将 Excel 报价表拖拽到这里", 
 
 if uploaded_file is not None:
     df = pd.read_excel(uploaded_file)
+    
+    # ================= 智能兼容与清洗 =================
+    df = smart_column_mapping(df)
+    
+    # 核心校验：必须要有报价和数量
+    if '最新报价' not in df.columns or '采购数量' not in df.columns:
+        st.error("❌ 表格解析失败：未找到【最新报价/单价】或【采购数量】列，请检查表头名称。")
+        st.stop()
+        
+    # 容错处理：缺少某些列时自动补齐
+    if '物料名称' not in df.columns:
+        df['物料名称'] = df['物料编码'] if '物料编码' in df.columns else '未知物料'
+    if '历史单价' not in df.columns:
+        df['历史单价'] = df['最新报价']
+    if '客户预算价' not in df.columns:
+        df['客户预算价'] = 9999999
+        
+    # 数据强制清洗
+    df = clean_numeric_data(df, ['最新报价', '采购数量', '历史单价', '客户预算价'])
+    
+    # ================= 业务计算 =================
     df['核算总成本'] = df['最新报价'] * df['采购数量']
     total_cost = df['核算总成本'].sum()
+    
+    # 防除零报错
     df['涨幅比例'] = (df['最新报价'] - df['历史单价']) / df['历史单价']
+    df['涨幅比例'] = df['涨幅比例'].replace([float('inf'), -float('inf')], 0).fillna(0)
+    
     alerts_df = df[(df['涨幅比例'] > 0.08) | (df['最新报价'] > df['客户预算价'])]
     
     st.write("") 
@@ -215,7 +269,7 @@ if uploaded_file is not None:
                     table_html += f"<th>{col}</th>"
                 table_html += "</tr></thead><tbody>"
                 for _, row in display_df.iterrows():
-                    table_html += f"<tr><td>{row['物料编码']}</td><td>{row['物料名称']}</td><td>{row['历史单价']}</td><td>{row['最新报价']}</td><td style='color: #EF4444; font-weight: 600;'>{row['涨幅比例']}</td></tr>"
+                    table_html += f"<tr><td>{row.get('物料编码', '-')}</td><td>{row['物料名称']}</td><td>{row['历史单价']}</td><td>{row['最新报价']}</td><td style='color: #EF4444; font-weight: 600;'>{row['涨幅比例']}</td></tr>"
                 table_html += "</tbody></table>"
                 
                 st.markdown(table_html, unsafe_allow_html=True)
